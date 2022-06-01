@@ -2,9 +2,7 @@
 
 using namespace std;
 
-pair<string_view, optional<string_view>> SplitTwoStrict(
-    string_view s, string_view delimiter
-) {
+pair<string_view, optional<string_view>> SplitTwoStrict( string_view s, string_view delimiter) {
     const size_t pos = s.find(delimiter);
     if (pos == s.npos) {
         return { s, nullopt };
@@ -13,9 +11,7 @@ pair<string_view, optional<string_view>> SplitTwoStrict(
         return { s.substr(0, pos), s.substr(pos + delimiter.length()) };
     }
 }
-pair<string_view, string_view> SplitTwo(
-    string_view s, string_view delimiter
-) {
+pair<string_view, string_view> SplitTwo( string_view s, string_view delimiter) {
     const auto [lhs, rhs_opt] = SplitTwoStrict(s, delimiter);
     return { lhs, rhs_opt.value_or("") };
 }
@@ -48,34 +44,53 @@ double ConvertToDouble(std::string_view str) {
     return result;
 }
 
-void StopRequest::ParseFrom(string_view str) {
-    object.name = ReadToken(str, ":");
-    object.location = { ConvertToDouble(ReadToken(str, ",")),
-                        ConvertToDouble(str) };
-    //object.location->longitude = ConvertToDouble(str);
+Location Location::FromString(std::string_view& str) {
+    double latitude = ConvertToDouble(ReadToken(str, ","));
+    double longitude = ConvertToDouble(str);
+    ValidateBounds(latitude, 0.0, 360.0);
+    ValidateBounds(longitude, 0.0, 360.0);
+    return { latitude, longitude };
 }
-void BusRequest::ParseFrom(string_view str) {
-    object.name = ReadToken(str, ": ");
-    if (str.empty()) { return; }
-    string_view delimiter(" > ");
+
+RouteType RouteType::FromString(std::string_view& str) {
+    std::string_view delimiter(" > ");
     char ch('>');
     if (str.find(delimiter) == str.npos) {
         delimiter = " - ";
         ch = '-';
     }
-    vector<std::string> routes;
-    unordered_set<std::string> setRroute;
+    std::vector<std::string> routes;
+    std::unordered_set<std::string> setRroute;
     while (!str.empty()) {
-        routes.push_back(string(ReadToken(str, delimiter)));
+        routes.push_back(std::string(ReadToken(str, delimiter)));
         setRroute.insert(routes.back());
     }
-    object.routeType = { move(routes), move(setRroute), ch };
+    return RouteType{ routes, setRroute, ch };
 }
 
-string_view StopRequest::GetName() const {
-    return object.name;
+void StopRequest::ParseFrom(string_view str) {
+    object.name = ReadToken(str, ":");
+    object.location = Location::FromString(str);
 }
-string_view BusRequest::GetName() const {
+
+void BusRequest::ParseFrom(string_view str) {
+    object.name = ReadToken(str, ": ");
+    if (!str.empty()) {
+        object.routeType = RouteType::FromString(str);
+    }
+}
+
+std::optional<Request::Type> Request::FromString(std::string_view& str) {
+    if (const auto it = STR_TO_REQUEST_TYPE.find(ReadToken(str));
+        it != STR_TO_REQUEST_TYPE.end()) {
+        return it->second;
+    }
+    else {
+        return nullopt;
+    }
+}
+
+string_view Request::GetName() const {
     return object.name;
 }
 
@@ -90,18 +105,8 @@ RequestHolder Request::Create(Request::Type type) {
     }
 }
 
-std::optional<Request::Type> ConvertRequestTypeFromString(std::string_view type_str) {
-    if (const auto it = STR_TO_REQUEST_TYPE.find(type_str);
-        it != STR_TO_REQUEST_TYPE.end()) {
-        return it->second;
-    }
-    else {
-        return nullopt;
-    }
-}
-
 RequestHolder ParseRequest(string_view request_str) {
-    const auto request_type = ConvertRequestTypeFromString(ReadToken(request_str));
+    const auto request_type = Request::FromString(request_str);
     if (!request_type) {
         return nullptr;
     }
@@ -128,23 +133,11 @@ vector<RequestHolder> ReadRequests(istream& in_stream) {
     return requests;
 }
 
-class LocationRadian {
-public:
-    double latitude;
-    double longitude;
-    LocationRadian(Location loc):
-        latitude((loc.latitude*PI ) / 180),
-        longitude((loc.longitude*PI) / 180){}
-};
-
-double arcLength(const Location& loc_degry1, const Location& loc_degry2) {
-    LocationRadian loc1(loc_degry1);
-    LocationRadian loc2(loc_degry2);
-    double result = acos(sin(loc1.latitude) * sin(loc2.latitude) +
-                     cos(loc1.latitude) * cos(loc2.latitude) *
-                     cos(abs(loc1.longitude - loc2.longitude))
-                    ) * 6371000;
-    return result; // Delta in meters
+double Location::arcLength(const Location& oher) const {
+    return acos(
+        sin(this->latitude) * sin(oher.latitude) +
+        cos(this->latitude) * cos(oher.latitude) * cos(abs(this->longitude - oher.longitude))
+    ) * ERTH_RADIUS; // Delta in meters
 }
 
 ostream& writingResult(const vector<BusResult>& busesResult, ostream& out) {
@@ -190,10 +183,10 @@ BusResult Base::findBus(busName name) const {
                                                       (route->vectorRoute.size() * 2) - 1);
         data.uniqStops = route->setRroute.size();
         for (size_t i(0); i < route->vectorRoute.size() - 1; ++i) {
-            data.lenRoute += arcLength(
-                *(baseOfStop.find(route->vectorRoute[i])->second->object.location),
-                *(baseOfStop.find(route->vectorRoute[i + 1])->second->object.location)
-            );
+            data.lenRoute += 
+                baseOfStop.find(route->vectorRoute[i])->second->object.location->arcLength(
+                    *(baseOfStop.find(route->vectorRoute[i + 1])->second->object.location)
+                );
         }
         if (route->routType_ == '-') {
             data.lenRoute *= 2.0;

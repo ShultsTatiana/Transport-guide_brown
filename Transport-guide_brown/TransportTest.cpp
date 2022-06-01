@@ -21,7 +21,7 @@ Bus 750\n\
 Bus 751\n"
 };
 
-bool doubleCompare(double x1, double x2, double epsilon = 0.00001) {
+bool doubleCompare(double x1, double x2, double epsilon = 0.000001) {
 	double delta = abs(x1 - x2);
 	double delta1 = x1 * epsilon;
 	double delta2 = x2 * epsilon;
@@ -103,10 +103,10 @@ void testParseInputStopRequest() {
 		"Biryulyovo Passazhirskaya: 55.580999, 37.659164"
 	};
 	vector<Stop> expect{
-		{"Tolstopaltsevo", 55.611087, 37.20829},
-		{"Marushkino", 55.595884, 37.209755},
-		{"Biryulyovo Tovarnaya", 55.592028, 37.653656},
-		{"Biryulyovo Passazhirskaya", 55.580999, 37.659164}
+		{"Tolstopaltsevo", Location(55.611087, 37.20829)},
+		{"Marushkino", Location(55.595884, 37.209755)},
+		{"Biryulyovo Tovarnaya", Location(55.592028, 37.653656)},
+		{"Biryulyovo Passazhirskaya", Location(55.580999, 37.659164)}
 	};
 	for (size_t i(0); i < input.size(); ++i) {
 		StopRequest request = StopRequest();
@@ -179,8 +179,8 @@ ostream& operator<<(ostream& out, const BusResult& result) {
 }
 
 void testLeght() {
-	double length = (arcLength({ 55.611087, 37.20829 }, { 55.595884, 37.209755 }) +
-		arcLength({ 55.595884, 37.209755 }, { 55.632761, 37.333324 })) * 2;
+	double length = ( Location(55.611087, 37.20829).arcLength(Location( 55.595884, 37.209755 )) +
+		Location(55.595884, 37.209755).arcLength(Location( 55.632761, 37.333324 )) ) * 2;
 	ASSERT(doubleCompare(length, 20939.5, 0.0001));
 }
 

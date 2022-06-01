@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <iterator>
 #include <cmath>
+#include <exception>
 
 
 template <typename Number>
@@ -45,14 +46,41 @@ double ConvertToDouble(std::string_view str);
 class Request;
 using RequestHolder = std::unique_ptr<Request>;
 
+static const double PI = 3.1415926535; //= acos(-1);
+static const double ERTH_RADIUS = 6'371'000.0; // в метрах
+
+template <typename Number>
+void ValidateBounds(Number number_to_check, Number min_value, Number max_value) {
+    if (number_to_check < min_value || number_to_check > max_value) {
+        std::stringstream error;
+        error << number_to_check << " is out of [" << min_value << ", " << max_value << "]";
+        throw std::out_of_range(error.str());
+    }
+}
+
 struct Location {
-    double latitude;
-    double longitude;
+    double latitude = 0.0;
+    double longitude = 0.0;
+
+    Location (double latitudeDegree = 0.0, double longitudeDegree = 0.0) :
+        latitude((latitudeDegree* PI) / 180),
+        longitude((longitudeDegree* PI) / 180) {}
+
+    Location(const Location& location) :
+        latitude(location.latitude),
+        longitude(location.longitude) {}
+
+    static Location FromString(std::string_view& str);
+
+    double arcLength(const Location& oher) const;
 };
+
 struct RouteType {
     std::vector<std::string> vectorRoute;
     std::unordered_set<std::string> setRroute;
     std::optional<char> routType_;
+
+    static RouteType FromString(std::string_view& str);
 };
 struct ObjectRequest {
     std::string name;
@@ -70,8 +98,10 @@ public:
     Request(Type type) : type(type) {}
     static RequestHolder Create(Type type);
     virtual void ParseFrom(std::string_view) = 0;
-    virtual std::string_view GetName() const = 0;
     virtual ~Request() = default;
+
+    std::string_view GetName() const;
+    static std::optional<Request::Type> FromString(std::string_view& str);
 
     const Type type;
     using stopName = std::string;
@@ -79,37 +109,26 @@ public:
     ObjectRequest object;
 };
 
-const std::unordered_map<std::string_view, Request::Type> STR_TO_REQUEST_TYPE = {
+static const std::unordered_map<std::string_view, Request::Type> STR_TO_REQUEST_TYPE = {
     {"Stop", Request::Type::STOP},
     {"Bus", Request::Type::BUS},
 };
-
-static const double PI(3.1415926535); //= acos(-1);
-static const long ERTH_RADIUS(6371 * 1000);
-
 
 class StopRequest :public Request {
 public:
     StopRequest() : Request(Type::STOP) {}
     void ParseFrom(std::string_view str) override;
-    std::string_view GetName() const override;
 };
 class BusRequest : public Request {
 public:
     //mb rout type like enumClass
     BusRequest() : Request(Type::BUS) {}
     void ParseFrom(std::string_view str) override;
-    std::string_view GetName() const override;
 };
-
-std::optional<Request::Type> ConvertRequestTypeFromString(std::string_view type_str);
 
 RequestHolder ParseRequest(std::string_view request_str);
 
-//std::vector<RequestHolder> FillBase(std::istream& in_stream = std::cin);
 std::vector<RequestHolder> ReadRequests(std::istream& in_stream = std::cin);
-
-double arcLength(const Location& loc1, const Location& loc2);
 
 struct Result {
     size_t amountStops;
