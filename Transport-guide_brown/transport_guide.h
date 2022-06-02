@@ -44,8 +44,7 @@ std::string_view ReadToken(std::string_view& s, std::string_view delimiter = " "
 int ConvertToInt(std::string_view str);
 double ConvertToDouble(std::string_view str);
 
-class Request;
-using RequestHolder = std::unique_ptr<Request>;
+
 
 static const double PI = 3.1415926535; //= acos(-1);
 static const double ERTH_RADIUS = 6'371'000.0; // в метрах
@@ -63,7 +62,7 @@ struct Location {
     double latitude = 0.0;
     double longitude = 0.0;
 
-    Location (double latitudeDegree = 0.0, double longitudeDegree = 0.0) :
+    Location(double latitudeDegree = 0.0, double longitudeDegree = 0.0) :
         latitude((latitudeDegree* PI) / 180),
         longitude((longitudeDegree* PI) / 180) {}
 
@@ -83,12 +82,22 @@ struct RouteType {
 
     static RouteType FromString(std::string_view& str);
 };
-struct ObjectRequest {
+
+struct Object {
     std::string name;
+    //Object (std::string _name) : name(_name) {}
+};
+
+struct Stop : Object {
+    Stop() : Object() {}
     std::optional<Location> location;
+};
+struct Bus : Object {
+    Bus() : Object() {}
     std::optional<RouteType> routeType;
 };
 
+template <typename ObjectHolder>
 class Request {
 public:
     enum class Type {
@@ -96,7 +105,7 @@ public:
         BUS,
     };
 
-    Request(Type type) : type(type) {}
+    Request(Type type, ObjectHolder object) : type(type), object(object){}
     static RequestHolder Create(Type type);
     virtual void ParseFrom(std::string_view) = 0;
     virtual ~Request() = default;
@@ -105,26 +114,26 @@ public:
     static std::optional<Request::Type> FromString(std::string_view& str);
 
     const Type type;
-    using stopName = std::string;
-    using busName = std::string;
-    ObjectRequest object;
+    ObjectHolder object;
 };
 
-static const std::unordered_map<std::string_view, Request::Type> STR_TO_REQUEST_TYPE = {
-    {"Stop", Request::Type::STOP},
-    {"Bus", Request::Type::BUS},
+//using ObjectHolder = std::unique_ptr<Object>;
+using RequestHolder = std::unique_ptr<Request<std::unique_ptr<Object>>>;
+
+class StopRequest :public Request<Object> {
+public:
+    StopRequest() : Request<Object>(Type::STOP, Stop()) {}
+    void ParseFrom(std::string_view str) override;
 };
 
-class StopRequest :public Request {
+class BusRequest : public Request<Object> {
 public:
-    StopRequest() : Request(Type::STOP) {}
+    BusRequest() : Request<Object>(Type::BUS, Bus()) {}
     void ParseFrom(std::string_view str) override;
 };
-class BusRequest : public Request {
-public:
-    //mb rout type like enumClass
-    BusRequest() : Request(Type::BUS) {}
-    void ParseFrom(std::string_view str) override;
+static const std::unordered_map<std::string_view, Request<Object>::Type> STR_TO_REQUEST_TYPE = {
+    {"Stop", Request<Object>::Type::STOP},
+    {"Bus", Request<Object>::Type::BUS},
 };
 
 RequestHolder ParseRequest(std::string_view request_str);

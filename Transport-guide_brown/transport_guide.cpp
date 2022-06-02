@@ -52,6 +52,13 @@ Location Location::FromString(std::string_view& str) {
     return { latitude, longitude };
 }
 
+double Location::arcLength(const Location& oher) const {
+    return acos(
+        sin(this->latitude) * sin(oher.latitude) +
+        cos(this->latitude) * cos(oher.latitude) * cos(abs(this->longitude - oher.longitude))
+    ) * ERTH_RADIUS; // Delta in meters
+}
+
 RouteType RouteType::FromString(std::string_view& str) {
     std::string_view delimiter(" > ");
     char ch('>');
@@ -69,7 +76,8 @@ RouteType RouteType::FromString(std::string_view& str) {
 }
 
 void StopRequest::ParseFrom(string_view str) {
-    object.name = ReadToken(str, ":");
+    object = make_unique<Stop>(ReadToken(str, ":"));
+    //object.name = ReadToken(str, ":");
     if (!str.empty()) {
         object.location = Location::FromString(str);
     }
@@ -135,14 +143,6 @@ vector<RequestHolder> ReadRequests(istream& in_stream) {
     return requests;
 }
 
-double Location::arcLength(const Location& oher) const {
-    return acos(
-        sin(this->latitude) * sin(oher.latitude) +
-        cos(this->latitude) * cos(oher.latitude) * cos(abs(this->longitude - oher.longitude))
-    ) * ERTH_RADIUS; // Delta in meters
-}
-
-
 ostream& BusResult::writingResult(ostream& out) {
     out << "Bus " << this->name << ": ";
     if (this->result) {
@@ -207,6 +207,7 @@ BusResult Base::findBus(busName name) const {
         data.amountStops = (route->routType_ == '>' ? route->vectorRoute.size() :
                                                      (route->vectorRoute.size() * 2) - 1);
         data.uniqStops = route->setRroute.size();
+        //Œ¡ﬂ«¿“≈À‹ÕŒ œ≈–≈œ»—¿“‹!!!!
         for (size_t i(0); i < route->vectorRoute.size() - 1; ++i) {
             data.lenRoute +=
                 baseOfStop.find(route->vectorRoute[i])->second->object.location->arcLength(
