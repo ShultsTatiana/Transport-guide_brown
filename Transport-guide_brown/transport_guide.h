@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <set>
 #include <memory>
 #include <exception>
 #include <system_error>
@@ -130,18 +131,38 @@ RequestHolder ParseRequest(std::string_view request_str);
 
 std::vector<RequestHolder> ReadRequests(std::istream& in_stream = std::cin);
 
+struct RequestResult {
+    RequestResult() = default;
+    RequestResult(std::string_view name_) : name(name_){}
+
+    std::string_view name;
+    virtual std::ostream& writingResult(std::ostream& out) = 0;
+};
+
 struct Result {
-    size_t amountStops;
-    size_t uniqStops;
-    double lenRoute;
+    size_t amountStops = 0;
+    size_t uniqStops = 0;
+    double lenRoute = 0.0;
 };
 
-struct BusResult {
-    std::string_view bus;
-    std::optional<Result> result;
+struct BusResult:RequestResult {
+    BusResult() = default;
+    BusResult(std::string_view name_, std::optional<Result> result_):
+        RequestResult(name_), result(std::move(result_)){}
+
+    std::optional<Result> result = std::nullopt;
+    std::ostream& writingResult(std::ostream& out) override;
+};
+struct StopResult :RequestResult {
+    StopResult() = default;
+    StopResult(std::string_view name_, std::optional<std::string> result_) :
+        RequestResult(name_), result(std::move(result_)) {}
+
+    std::optional<std::string> result = std::nullopt;
+    std::ostream& writingResult(std::ostream& out) override;
 };
 
-std::ostream& writingResult(const std::vector<BusResult>& busesResult, std::ostream& out = std::cout);
+std::ostream& writingResult(const std::vector<std::unique_ptr<RequestResult>>& busesResult, std::ostream& out = std::cout);
 
 class Base {
     using busName = std::string_view;
@@ -149,6 +170,7 @@ class Base {
 
 
     std::unordered_map<stopName, RequestHolder> baseOfStop;
+    std::unordered_map<stopName, std::set<busName>> baseOfStorBus;
     std::unordered_map<busName, RequestHolder> baseOfBus;
 public:
     Base(std::vector<RequestHolder>& groundRequest) {
@@ -156,8 +178,9 @@ public:
     }
     void baseUpdating(std::vector<RequestHolder>& groundRequest);
 
-    std::vector<BusResult> checkRequests(const std::vector<RequestHolder>& checkRequest) const;
+    std::vector<std::unique_ptr<RequestResult>> checkRequests(const std::vector<RequestHolder>& checkRequest) const;
 
     BusResult findBus(busName name) const;
+    StopResult findStop(stopName name) const;
 };
 Base ProcessRequests(std::vector<RequestHolder>& base);
