@@ -58,137 +58,60 @@ bool doubleCompare(double x1, double x2, double epsilon = 0.000001) {
 
 bool operator==(const StopRequest& lhs, const StopRequest& rhs) {
 	return(
-		lhs.object.name == rhs.object.name &&
-		doubleCompare(lhs.object.location->latitude, rhs.object.location->latitude, 0.000001) &&
-		doubleCompare(lhs.object.location->longitude, rhs.object.location->longitude, 0.000001)
+		lhs.GetName() == rhs.GetName() &&
+		doubleCompare(lhs.stop->location->latitude, rhs.stop->location->latitude, 0.000001) &&
+		doubleCompare(lhs.stop->location->longitude, rhs.stop->location->longitude, 0.000001)
 		);
 }
 
-struct Stop {
-	Request::stopName stopName_;
-	Location location;
-};
-struct Bus {
-	Request::busName busNumb_;
-	std::vector<Request::stopName> rout_;
-	std::optional<char> routType_;
-};
-
-bool operator==(const StopRequest& lhs, const Stop& rhs) {
+bool operator==(const Stop& lhs, const Stop& rhs) {
 	return(
-		lhs.object.name == rhs.stopName_ &&
-		doubleCompare(lhs.object.location->latitude, rhs.location.latitude, 0.000001) &&
-		doubleCompare(lhs.object.location->longitude, rhs.location.longitude, 0.000001)
+		lhs.name == rhs.name &&
+		doubleCompare(lhs.location->latitude, rhs.location->latitude, 0.000001) &&
+		doubleCompare(lhs.location->longitude, rhs.location->longitude, 0.000001)
 		);
 }
-bool operator==(const BusRequest& lhs, const Bus& rhs) {
+bool operator==(const Bus& lhs, const Bus& rhs) {
 	return(
-		lhs.object.name == rhs.busNumb_ &&
-		lhs.object.routeType->vectorRoute == rhs.rout_ &&
-		lhs.object.routeType->routType_ == rhs.routType_
+		lhs.name == rhs.name &&
+		lhs.vectorRoute == rhs.vectorRoute &&
+		lhs.routType_ == rhs.routType_
 		);
 }
 
 ostream& operator<<(ostream& out, const StopRequest& lhs) {
-	out << lhs.object.name << ": "
-		<< lhs.object.location->latitude << ", "
-		<< lhs.object.location->longitude;
+	out << lhs.GetName() << ": "
+		<< lhs.stop->location->latitude << ", "
+		<< lhs.stop->location->longitude;
 	return out;
 }
 ostream& operator<<(ostream& out, const Stop& lhs) {
-	out << lhs.stopName_ << ": "
-		<< lhs.location.latitude << ", "
-		<< lhs.location.longitude;
+	out << lhs.name << ": "
+		<< lhs.location->latitude << ", "
+		<< lhs.location->longitude;
 	return out;
 }
 
 ostream& operator<<(ostream& out, const BusRequest& lhs) {
-	out << lhs.object.name << ": ";
-	if (!lhs.object.routeType->vectorRoute.empty()) {
-		for (size_t i(0); i < lhs.object.routeType->vectorRoute.size() - 1; ++i) {
-			out << lhs.object.routeType->vectorRoute[i] << " " << lhs.object.routeType->routType_.value() << " ";
+	out << lhs.GetName() << ": ";
+	if (!lhs.bus->vectorRoute.empty()) {
+		for (size_t i(0); i < lhs.bus->vectorRoute.size() - 1; ++i) {
+			out << lhs.bus->vectorRoute[i] << " " << lhs.bus->routType_.value() << " ";
 		}
-		out << lhs.object.routeType->vectorRoute.back();
+		out << lhs.bus->vectorRoute.back();
 	}
 	return out;
 }
 ostream& operator<<(ostream& out, const Bus& lhs) {
-	out << lhs.busNumb_ << ": ";
-	if (!lhs.rout_.empty()) {
-		for (size_t i(0); i < lhs.rout_.size() - 1; ++i) {
-			out << lhs.rout_ << " " << lhs.routType_.value() << " ";
+	out << lhs.name << ": ";
+	if (!lhs.vectorRoute.empty()) {
+		for (size_t i(0); i < lhs.vectorRoute.size() - 1; ++i) {
+			out << lhs.vectorRoute << " " << lhs.routType_.value() << " ";
 		}
-		out << lhs.rout_.back();
+		out << lhs.vectorRoute.back();
 	}
 	return out;
 }
-
-void testParseInputStopRequest() {
-	/*vector<string> input{
-		"Tolstopaltsevo: 55.611087, 37.20829, 3900m to Marushkino",
-		"Marushkino: 55.595884, 37.209755, 9900m to Rasskazovka",
-		"Rasskazovka: 55.632761, 37.333324",
-		"Biryulyovo Zapadnoye: 55.574371, 37.6517, 7500m to Rossoshanskaya ulitsa, 1800m to Biryusinka, 2400m to Universam",
-		"Biryusinka: 55.581065, 37.64839, 750m to Universam",
-		"Universam: 55.587655, 37.645687, 5600m to Rossoshanskaya ulitsa, 900m to Biryulyovo Tovarnaya",
-		"Biryulyovo Tovarnaya: 55.592028, 37.653656, 1300m to Biryulyovo Passazhirskaya",
-		"Biryulyovo Passazhirskaya: 55.580999, 37.659164, 1200m to Biryulyovo Zapadnoye",
-		"Rossoshanskaya ulitsa: 55.595579, 37.605757",
-		"Prazhskaya: 55.611678, 37.603831",
-	};*/
-	vector<string> input{
-		"Tolstopaltsevo: 55.611087, 37.20829",
-		"Marushkino: 55.595884, 37.209755",
-		"Biryulyovo Tovarnaya: 55.592028, 37.653656",
-		"Biryulyovo Passazhirskaya: 55.580999, 37.659164"
-	};
-	vector<Stop> expect{
-		{"Tolstopaltsevo", Location(55.611087, 37.20829)},
-		{"Marushkino", Location(55.595884, 37.209755)},
-		{"Biryulyovo Tovarnaya", Location(55.592028, 37.653656)},
-		{"Biryulyovo Passazhirskaya", Location(55.580999, 37.659164)}
-	};
-	for (size_t i(0); i < input.size(); ++i) {
-		StopRequest request = StopRequest();
-		request.ParseFrom(input[i]);
-		ASSERT_EQUAL( request, expect[i] );
-	}
-
-}
-void testParseInputBusRequest() {
-	vector<string> input{
-		"256: Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye",
-		"750: Tolstopaltsevo - Marushkino - Rasskazovka",
-	};
-	vector<Bus> expect{
-		{
-			"256", 
-			{
-			"Biryulyovo Zapadnoye",
-			"Biryusinka", 
-			"Universam",
-			"Biryulyovo Tovarnaya",
-			"Biryulyovo Passazhirskaya",
-			"Biryulyovo Zapadnoye"
-			},
-			'>'
-		},
-		{"750", {"Tolstopaltsevo", "Marushkino", "Rasskazovka"}, '-'},
-	};
-	for (size_t i(0); i < input.size(); ++i) {
-		BusRequest request = BusRequest();
-		request.ParseFrom(input[i]);
-		ASSERT_EQUAL(request, expect[i]);
-	}
-
-}
-
-/*void simpleTestFill(){
-	stringstream input;
-	input << inStr;
-	auto request = ReadRequests(input);
-	Base base(ProcessRequests(request));
-}*/
 
 bool operator==(const BusResult& lhs, const BusResult& rhs) {
 	if (lhs.result && rhs.result) {
@@ -223,6 +146,81 @@ bool operator==(const StopResult& lhs, const StopResult& rhs) {
 	}
 	else { return lhs.name == rhs.name; }
 }
+
+/*vector<string> input{
+		"Tolstopaltsevo: 55.611087, 37.20829, 3900m to Marushkino",
+		"Marushkino: 55.595884, 37.209755, 9900m to Rasskazovka",
+		"Rasskazovka: 55.632761, 37.333324",
+		"Biryulyovo Zapadnoye: 55.574371, 37.6517, 7500m to Rossoshanskaya ulitsa, 1800m to Biryusinka, 2400m to Universam",
+		"Biryusinka: 55.581065, 37.64839, 750m to Universam",
+		"Universam: 55.587655, 37.645687, 5600m to Rossoshanskaya ulitsa, 900m to Biryulyovo Tovarnaya",
+		"Biryulyovo Tovarnaya: 55.592028, 37.653656, 1300m to Biryulyovo Passazhirskaya",
+		"Biryulyovo Passazhirskaya: 55.580999, 37.659164, 1200m to Biryulyovo Zapadnoye",
+		"Rossoshanskaya ulitsa: 55.595579, 37.605757",
+		"Prazhskaya: 55.611678, 37.603831",
+	};*/
+
+void testParseInputStopRequest() {
+	
+	vector<string> input{
+		"Tolstopaltsevo: 55.611087, 37.20829",
+		"Marushkino: 55.595884, 37.209755",
+		"Biryulyovo Tovarnaya: 55.592028, 37.653656",
+		"Biryulyovo Passazhirskaya: 55.580999, 37.659164"
+	};
+	vector<Stop> expect {
+		{"Tolstopaltsevo", Location(55.611087, 37.20829) },
+		{"Marushkino", Location(55.595884, 37.209755) },
+		{"Biryulyovo Tovarnaya", Location(55.592028, 37.653656) },
+		{"Biryulyovo Passazhirskaya", Location(55.580999, 37.659164) }
+	};
+	for (size_t i(0); i < input.size(); ++i) {
+		StopRequest request = StopRequest();
+		request.ParseFrom(input[i]);
+		ASSERT_EQUAL( *(request.stop), expect[i] );
+	}
+
+}
+
+void testParseInputBusRequest() {
+	vector<string> input{
+		"256: "
+		"Biryulyovo Zapadnoye > "
+		"Biryusinka > "
+		"Universam > "
+		"Biryulyovo Tovarnaya > "
+		"Biryulyovo Passazhirskaya > "
+		"Biryulyovo Zapadnoye",
+		"750: Tolstopaltsevo - Marushkino - Rasskazovka",
+	};
+	vector<Bus> expect{
+		{ "256",
+			'>', {
+			"Biryulyovo Zapadnoye",
+			"Biryusinka", 
+			"Universam",
+			"Biryulyovo Tovarnaya",
+			"Biryulyovo Passazhirskaya",
+			"Biryulyovo Zapadnoye"
+			}
+		},
+		{"750", '-', {"Tolstopaltsevo", "Marushkino", "Rasskazovka"}},
+	};
+	for (size_t i(0); i < input.size(); ++i) {
+		BusRequest request = BusRequest();
+		request.ParseFrom(input[i]);
+		ASSERT_EQUAL(*(request.bus), expect[i]);
+	}
+
+}
+
+/*void simpleTestFill(){
+	stringstream input;
+	input << inStr;
+	auto request = ReadRequests(input);
+	Base base(ProcessRequests(request));
+}*/
+
 
 void testLeght() {
 	double length = ( Location(55.611087, 37.20829).arcLength(Location( 55.595884, 37.209755 )) +

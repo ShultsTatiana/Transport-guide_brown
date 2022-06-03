@@ -75,29 +75,25 @@ struct Location {
     double arcLength(const Location& oher) const;
 };
 
-struct RouteType {
+struct Stop {
+    std::string name;
+    std::optional<Location> location;
+
+    static Stop FromString(std::string_view& str);
+};
+
+struct Bus {
+    std::string name;
+    std::optional<char> routType_;
     std::vector<std::string> vectorRoute;
     std::unordered_set<std::string> setRroute;
-    std::optional<char> routType_;
 
-    static RouteType FromString(std::string_view& str);
+    static Bus FromString(std::string_view& str);
 };
 
-struct Object {
-    std::string name;
-    //Object (std::string _name) : name(_name) {}
-};
+class Request;
+using RequestHolder = std::unique_ptr<Request>;
 
-struct Stop : Object {
-    Stop() : Object() {}
-    std::optional<Location> location;
-};
-struct Bus : Object {
-    Bus() : Object() {}
-    std::optional<RouteType> routeType;
-};
-
-template <typename ObjectHolder>
 class Request {
 public:
     enum class Type {
@@ -105,7 +101,7 @@ public:
         BUS,
     };
 
-    Request(Type type, ObjectHolder object) : type(type), object(object){}
+    Request(Type type) : type(type) {}
     static RequestHolder Create(Type type);
     virtual void ParseFrom(std::string_view) = 0;
     virtual ~Request() = default;
@@ -114,26 +110,28 @@ public:
     static std::optional<Request::Type> FromString(std::string_view& str);
 
     const Type type;
-    ObjectHolder object;
+    //std::string name;
+    std::optional<Stop> stop;
+    std::optional<Bus> bus;
 };
 
-//using ObjectHolder = std::unique_ptr<Object>;
-using RequestHolder = std::unique_ptr<Request<std::unique_ptr<Object>>>;
 
-class StopRequest :public Request<Object> {
+
+class StopRequest :public Request {
 public:
-    StopRequest() : Request<Object>(Type::STOP, Stop()) {}
+    StopRequest() : Request(Type::STOP) {}
     void ParseFrom(std::string_view str) override;
 };
 
-class BusRequest : public Request<Object> {
+class BusRequest : public Request {
 public:
-    BusRequest() : Request<Object>(Type::BUS, Bus()) {}
+    BusRequest() : Request(Type::BUS) {}
     void ParseFrom(std::string_view str) override;
 };
-static const std::unordered_map<std::string_view, Request<Object>::Type> STR_TO_REQUEST_TYPE = {
-    {"Stop", Request<Object>::Type::STOP},
-    {"Bus", Request<Object>::Type::BUS},
+
+static const std::unordered_map<std::string_view, Request::Type> STR_TO_REQUEST_TYPE = {
+    {"Stop", Request::Type::STOP},
+    {"Bus", Request::Type::BUS},
 };
 
 RequestHolder ParseRequest(std::string_view request_str);

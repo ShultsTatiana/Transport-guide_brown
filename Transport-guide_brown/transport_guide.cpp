@@ -59,35 +59,44 @@ double Location::arcLength(const Location& oher) const {
     ) * ERTH_RADIUS; // Delta in meters
 }
 
-RouteType RouteType::FromString(std::string_view& str) {
-    std::string_view delimiter(" > ");
-    char ch('>');
-    if (str.find(delimiter) == str.npos) {
-        delimiter = " - ";
-        ch = '-';
+Bus Bus::FromString(std::string_view& str) {
+    string name(ReadToken(str, ": "));
+    if (!str.empty()) {
+        std::string_view delimiter(" > ");
+        char ch('>');
+        if (str.find(delimiter) == str.npos) {
+            delimiter = " - ";
+            ch = '-';
+        }
+        std::vector<std::string> routes;
+        std::unordered_set<std::string> setRroute;
+        while (!str.empty()) {
+            routes.push_back(std::string(ReadToken(str, delimiter)));
+            setRroute.insert(routes.back());
+        }
+        return Bus{ name, ch, routes, setRroute };
     }
-    std::vector<std::string> routes;
-    std::unordered_set<std::string> setRroute;
-    while (!str.empty()) {
-        routes.push_back(std::string(ReadToken(str, delimiter)));
-        setRroute.insert(routes.back());
+    else {
+        return Bus{ name };
     }
-    return RouteType{ routes, setRroute, ch };
+}
+
+Stop Stop::FromString(string_view& str) {
+    string name(ReadToken(str, ": "));
+    if (!str.empty()) {
+        return { name, Location::FromString(str) };
+    }
+    else {
+        return { name };
+    }
 }
 
 void StopRequest::ParseFrom(string_view str) {
-    object = make_unique<Stop>(ReadToken(str, ":"));
-    //object.name = ReadToken(str, ":");
-    if (!str.empty()) {
-        object.location = Location::FromString(str);
-    }
+    stop = Stop::FromString(str);
 }
 
 void BusRequest::ParseFrom(string_view str) {
-    object.name = ReadToken(str, ": ");
-    if (!str.empty()) {
-        object.routeType = RouteType::FromString(str);
-    }
+    bus = Bus::FromString(str);
 }
 
 std::optional<Request::Type> Request::FromString(std::string_view& str) {
@@ -101,7 +110,12 @@ std::optional<Request::Type> Request::FromString(std::string_view& str) {
 }
 
 string_view Request::GetName() const {
-    return object.name;
+    if (type == Type::STOP) {
+        return stop->name;
+    }
+    else if (type == Type::BUS) {
+        return bus->name;
+    }
 }
 
 RequestHolder Request::Create(Request::Type type) {
@@ -178,13 +192,13 @@ ostream& writingResult(const vector<unique_ptr<RequestResult>>& busesResult, ost
 void Base::baseUpdating(std::vector<RequestHolder>& groundRequest) {
     for (auto& request : groundRequest) {
         if (request->type == Request::Type::STOP) {
-            auto stop = request->GetName();
+            string_view stop = request->GetName();
             baseOfStorBus[stop];
             baseOfStop[stop] = move(request);
         }
         else if (request->type == Request::Type::BUS) {
-            auto bus = request->GetName();
-            for (stopName stop : request->object.routeType->setRroute) {
+            string_view bus = request->GetName();
+            for (stopName stop : request->bus->setRroute) {
                 baseOfStorBus[stop].insert(bus);
             }
             baseOfBus[bus] = move(request);
@@ -203,15 +217,15 @@ BusResult Base::findBus(busName name) const {
     auto it = baseOfBus.find(name);
     if (it != baseOfBus.end()) {
         Result data{0, 0, 0.0};
-        auto& route = it->second->object.routeType;
+        auto& route = it->second->bus;
         data.amountStops = (route->routType_ == '>' ? route->vectorRoute.size() :
                                                      (route->vectorRoute.size() * 2) - 1);
         data.uniqStops = route->setRroute.size();
         //Œ¡ﬂ«¿“≈À‹ÕŒ œ≈–≈œ»—¿“‹!!!!
         for (size_t i(0); i < route->vectorRoute.size() - 1; ++i) {
             data.lenRoute +=
-                baseOfStop.find(route->vectorRoute[i])->second->object.location->arcLength(
-                    *(baseOfStop.find(route->vectorRoute[i + 1])->second->object.location)
+                baseOfStop.find(route->vectorRoute[i])->second->stop->location->arcLength(
+                    *(baseOfStop.find(route->vectorRoute[i + 1])->second->stop->location)
                 );
         }
         if (route->routType_ == '-') {
@@ -250,10 +264,10 @@ vector<unique_ptr<RequestResult>> Base::checkRequests(const vector<RequestHolder
     vector<unique_ptr<RequestResult>> result;
     for (const auto& request : checkRequest) {
         if (request->type == Request::Type::BUS) {
-            result.push_back(make_unique<BusResult>(findBus(request->object.name)));
+            result.push_back(make_unique<BusResult>(findBus(request->GetName())));
         }
         else if (request->type == Request::Type::STOP) {
-            result.push_back(make_unique<StopResult>(findStop(request->object.name)));
+            result.push_back(make_unique<StopResult>(findStop(request->GetName())));
         }
     }
 
