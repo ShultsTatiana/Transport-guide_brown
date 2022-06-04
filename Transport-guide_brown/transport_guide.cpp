@@ -45,17 +45,18 @@ double ConvertToDouble(std::string_view str) {
 }
 
 Location Location::FromString(std::string_view& str) {
-    double latitude = ConvertToDouble(ReadToken(str, ","));
-    double longitude = ConvertToDouble(str);
-    ValidateBounds(latitude, 0.0, 360.0);
-    ValidateBounds(longitude, 0.0, 360.0);
+    double latitude = ConvertToDouble(ReadToken(str, ", "));
+    double longitude = ConvertToDouble(ReadToken(str, ", "));
+    //ValidateBounds(latitude, 0.0, 360.0);
+    //ValidateBounds(longitude, 0.0, 360.0);
     return { latitude, longitude };
 }
 
 double Location::arcLength(const Location& oher) const {
     return acos(
         sin(this->latitude) * sin(oher.latitude) +
-        cos(this->latitude) * cos(oher.latitude) * cos(abs(this->longitude - oher.longitude))
+        cos(this->latitude) * cos(oher.latitude) * 
+        cos(abs(this->longitude - oher.longitude))
     ) * ERTH_RADIUS; // Delta in meters
 }
 
@@ -84,7 +85,13 @@ Bus Bus::FromString(std::string_view& str) {
 Stop Stop::FromString(string_view& str) {
     string name(ReadToken(str, ": "));
     if (!str.empty()) {
-        return { name, Location::FromString(str) };
+        Location location{ Location::FromString(str) };
+        vector<pair<string, int>> stops;
+        while (!str.empty()) {
+            int distance = ConvertToInt(ReadToken(str, "m to "));
+            stops.push_back({string(ReadToken(str, ", ")), distance });
+        }
+        return { name, location, stops };
     }
     else {
         return { name };
@@ -109,7 +116,7 @@ std::optional<Request::Type> Request::FromString(std::string_view& str) {
     }
 }
 
-string_view Request::GetName() const {
+std::string_view Request::GetName() const {
     if (type == Type::STOP) {
         return stop->name;
     }
@@ -162,7 +169,10 @@ ostream& BusResult::writingResult(ostream& out) {
     if (this->result) {
         out << this->result->amountStops << " stops on route, "
             << this->result->uniqStops << " unique stops, "
-            << this->result->lenRoute << " route length\n";
+            << std::fixed //<< std::setprecision(6)
+            << this->result->lenRoute << " route length, "
+            //<< std::fixed //<< std::setprecision(6)
+            << this->result->lenRoute / this->result->direct << " curvature\n";;
     }
     else {
         out << "not found\n";
@@ -192,8 +202,15 @@ ostream& writingResult(const vector<unique_ptr<RequestResult>>& busesResult, ost
 void Base::baseUpdating(std::vector<RequestHolder>& groundRequest) {
     for (auto& request : groundRequest) {
         if (request->type == Request::Type::STOP) {
-            string_view stop = request->GetName();
+            std::string_view stop = request->GetName();
             baseOfStorBus[stop];
+            for (auto& [stopTo, distance] : request->stop->distance) {
+                baseOfDistance[stop].insert({ stopTo, distance });
+                if (auto it = baseOfDistance[stopTo].find(stop); it == baseOfDistance[stopTo].end()) {
+                    baseOfDistance[stopTo].insert({ stop, distance });
+                }
+                
+            }
             baseOfStop[stop] = move(request);
         }
         else if (request->type == Request::Type::BUS) {
@@ -211,6 +228,27 @@ Base ProcessRequests(vector<RequestHolder>& base) {
     return returnBase;
 }
 
+double Base::distance(stopName from, stopName to) const {
+    auto it = baseOfDistance.find(from);
+    if (it != baseOfDistance.end()) {
+        auto it2 = it->second.find(to);
+        if ( it2 != it->second.end()) {
+            return it2->second;
+        }
+    }
+    else {
+        return baseOfStop.find(from)->second->stop->location->arcLength(
+            *(baseOfStop.find(to)->second->stop->location)
+        );
+    }
+}
+
+double Base::direct(stopName from, stopName to) const {
+    return baseOfStop.find(from)->second->stop->location->arcLength(
+        *(baseOfStop.find(to)->second->stop->location)
+    );
+}
+
 BusResult Base::findBus(busName name) const {
     BusResult result;
     result.name = name;
@@ -221,15 +259,16 @@ BusResult Base::findBus(busName name) const {
         data.amountStops = (route->routType_ == '>' ? route->vectorRoute.size() :
                                                      (route->vectorRoute.size() * 2) - 1);
         data.uniqStops = route->setRroute.size();
-        //Œ¡ﬂ«¿“≈À‹ÕŒ œ≈–≈œ»—¿“‹!!!!
+        
         for (size_t i(0); i < route->vectorRoute.size() - 1; ++i) {
-            data.lenRoute +=
-                baseOfStop.find(route->vectorRoute[i])->second->stop->location->arcLength(
-                    *(baseOfStop.find(route->vectorRoute[i + 1])->second->stop->location)
-                );
+            data.lenRoute += distance(route->vectorRoute[i], route->vectorRoute[i + 1]);
+            data.direct += direct(route->vectorRoute[i], route->vectorRoute[i + 1]);
         }
         if (route->routType_ == '-') {
-            data.lenRoute *= 2.0;
+            for (size_t i(0); i < route->vectorRoute.size() - 1; ++i) {
+                data.lenRoute += distance(route->vectorRoute[i], route->vectorRoute[i + 1]);
+                data.direct += direct(route->vectorRoute[i], route->vectorRoute[i + 1]);
+            }
         }
         result.result = move(data);
     }

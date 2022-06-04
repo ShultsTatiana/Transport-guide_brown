@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include <map>
 #include <memory>
 #include <exception>
 #include <system_error>
@@ -20,6 +21,7 @@
 #include <iterator>
 #include <cmath>
 #include <exception>
+#include <iomanip>
 
 
 template <typename Number>
@@ -78,6 +80,7 @@ struct Location {
 struct Stop {
     std::string name;
     std::optional<Location> location;
+    std::vector<std::pair<std::string, int>> distance;
 
     static Stop FromString(std::string_view& str);
 };
@@ -150,6 +153,7 @@ struct Result {
     size_t amountStops = 0;
     size_t uniqStops = 0;
     double lenRoute = 0.0;
+    double direct = 0.0;
 };
 
 struct BusResult:RequestResult {
@@ -179,6 +183,10 @@ class Base {
     std::unordered_map<stopName, RequestHolder> baseOfStop;
     std::unordered_map<stopName, std::set<busName>> baseOfStorBus;
     std::unordered_map<busName, RequestHolder> baseOfBus;
+    std::unordered_map<stopName, std::unordered_map<stopName, double>> baseOfDistance;
+
+    double distance(stopName from, stopName to) const;
+    double direct(stopName from, stopName to) const;
 public:
     Base(std::vector<RequestHolder>& groundRequest) {
         baseUpdating(groundRequest);
