@@ -47,8 +47,6 @@ double ConvertToDouble(std::string_view str) {
 Location Location::FromString(std::string_view& str) {
     double latitude = ConvertToDouble(ReadToken(str, ", "));
     double longitude = ConvertToDouble(ReadToken(str, ", "));
-    //ValidateBounds(latitude, 0.0, 360.0);
-    //ValidateBounds(longitude, 0.0, 360.0);
     return { latitude, longitude };
 }
 
@@ -58,28 +56,6 @@ double Location::arcLength(const Location& oher) const {
         cos(this->latitude) * cos(oher.latitude) * 
         cos(abs(this->longitude - oher.longitude))
     ) * ERTH_RADIUS; // Delta in meters
-}
-
-Bus Bus::FromString(std::string_view& str) {
-    string name(ReadToken(str, ": "));
-    if (!str.empty()) {
-        std::string_view delimiter(" > ");
-        char ch('>');
-        if (str.find(delimiter) == str.npos) {
-            delimiter = " - ";
-            ch = '-';
-        }
-        std::vector<std::string> routes;
-        std::unordered_set<std::string> setRroute;
-        while (!str.empty()) {
-            routes.push_back(std::string(ReadToken(str, delimiter)));
-            setRroute.insert(routes.back());
-        }
-        return Bus{ name, ch, routes, setRroute };
-    }
-    else {
-        return Bus{ name };
-    }
 }
 
 Stop Stop::FromString(string_view& str) {
@@ -97,11 +73,30 @@ Stop Stop::FromString(string_view& str) {
         return { name };
     }
 }
+Bus Bus::FromString(std::string_view& str) {
+    string name(ReadToken(str, ": "));
+    if (!str.empty()) {
+        std::string_view delimiter(" > ");
+        char ch('>');
+        if (str.find(delimiter) == str.npos) {
+            delimiter = " - ";
+            ch = '-';
+        }
+        std::vector<std::string> routes;
+        while (!str.empty()) {
+            routes.push_back(std::string(ReadToken(str, delimiter)));
+        }
+        return Bus{ name, ch, routes };
+    }
+    else {
+        return Bus{ name };
+    }
+}
+
 
 void StopRequest::ParseFrom(string_view str) {
     stop = Stop::FromString(str);
 }
-
 void BusRequest::ParseFrom(string_view str) {
     bus = Bus::FromString(str);
 }
@@ -116,7 +111,7 @@ std::optional<Request::Type> Request::FromString(std::string_view& str) {
     }
 }
 
-std::string_view Request::GetName() const {
+std::string_view Request::GetName() {
     if (type == Type::STOP) {
         return stop->name;
     }
@@ -164,25 +159,30 @@ vector<RequestHolder> ReadRequests(istream& in_stream) {
     return requests;
 }
 
-ostream& BusResult::writingResult(ostream& out) {
+ostream& BusResult::writingResult(ostream& out) const {
     out << "Bus " << this->name << ": ";
     if (this->result) {
         out << this->result->amountStops << " stops on route, "
             << this->result->uniqStops << " unique stops, "
-            << std::fixed //<< std::setprecision(6)
             << this->result->lenRoute << " route length, "
-            //<< std::fixed //<< std::setprecision(6)
-            << this->result->lenRoute / this->result->direct << " curvature\n";;
+            << std::fixed
+            << this->result->curvature << " curvature\n";
     }
     else {
         out << "not found\n";
     }
     return out;
 }
-ostream& StopResult::writingResult(ostream& out) {
+ostream& StopResult::writingResult(ostream& out) const {
     out << "Stop " << this->name << ": ";
     if (this->result) {
-        out << *result << "\n";
+        if (result->empty()) {
+            out << "no buses\n";
+        }
+        else {
+            out << "buses" << * result << "\n";
+        }
+        
     }
     else {
         out << "not found\n";
@@ -198,7 +198,7 @@ ostream& writingResult(const vector<unique_ptr<RequestResult>>& busesResult, ost
     }
     return out;
 }
-
+/*
 void Base::baseUpdating(std::vector<RequestHolder>& groundRequest) {
     for (auto& request : groundRequest) {
         if (request->type == Request::Type::STOP) {
@@ -311,4 +311,4 @@ vector<unique_ptr<RequestResult>> Base::checkRequests(const vector<RequestHolder
     }
 
     return result;
-}
+}*/

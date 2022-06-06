@@ -58,7 +58,7 @@ bool doubleCompare(double x1, double x2, double epsilon = 0.000001) {
 
 bool operator==(const StopRequest& lhs, const StopRequest& rhs) {
 	return(
-		lhs.GetName() == rhs.GetName() &&
+		lhs.stop->name == rhs.stop->name &&
 		doubleCompare(lhs.stop->location->latitude, rhs.stop->location->latitude, 0.000001) &&
 		doubleCompare(lhs.stop->location->longitude, rhs.stop->location->longitude, 0.000001)
 		);
@@ -88,7 +88,7 @@ bool operator==(const Bus& lhs, const Bus& rhs) {
 }
 
 ostream& operator<<(ostream& out, const StopRequest& lhs) {
-	out << lhs.GetName() << ": "
+	out << lhs.stop->name << ": "
 		<< lhs.stop->location->latitude << ", "
 		<< lhs.stop->location->longitude;
 	return out;
@@ -101,7 +101,7 @@ ostream& operator<<(ostream& out, const Stop& lhs) {
 }
 
 ostream& operator<<(ostream& out, const BusRequest& lhs) {
-	out << lhs.GetName() << ": ";
+	out << lhs.bus->name << ": ";
 	if (!lhs.bus->vectorRoute.empty()) {
 		for (size_t i(0); i < lhs.bus->vectorRoute.size() - 1; ++i) {
 			out << lhs.bus->vectorRoute[i] << " " << lhs.bus->routType_.value() << " ";
@@ -143,18 +143,9 @@ ostream& operator<<(ostream& out, const unique_ptr<RequestResult>& result) {
 	return out;
 }
 bool operator==(const StopResult& lhs, const StopResult& rhs) {
-	if (lhs.result && rhs.result) {
-		return (
-			lhs.name == rhs.name &&
-			lhs.result == rhs.result
-		);
-	}
-	else if ((!lhs.result && rhs.result) || (lhs.result && !rhs.result)) {
-		return false;
-	}
-	else { return lhs.name == rhs.name; }
+	return (lhs.name == rhs.name && lhs.result == rhs.result);
 }
-
+/*
 void testParseInputStopRequest() {
 	
 	vector<string> input{
@@ -343,19 +334,42 @@ Stop Biryulyovo Zapadnoye: buses 256 828\n"
 	writingResult(answer, out);
 	ASSERT_EQUAL(out.str(), expected);
 }
+*/
+void jastTest() {
+	stringstream input;
+	input << inStrC;
+	auto groundRequest = ReadRequests(input);
+	TransportGuide guide;
+	guide.readRequests(groundRequest);
+	auto requests = ReadRequests(input);
+	auto answer = guide.checkRequests(requests);
+	string expected{
+	"Bus 256: 6 stops on route, 5 unique stops, 5950 route length, 1.361239 curvature\n"
+	"Bus 750: 5 stops on route, 3 unique stops, 27600 route length, 1.318084 curvature\n"
+	"Bus 751: not found\n"
+	"Stop Samara: not found\n"
+	"Stop Prazhskaya: no buses\n"
+	"Stop Biryulyovo Zapadnoye: buses 256 828\n"
+	};
+	stringstream out;
+	writingResult(answer, out);
+	ASSERT_EQUAL(out.str(), expected);
+}
 
 void poolOfTEsts() {
 	TestRunner tr;
-	RUN_TEST(tr, testParseInputStopRequest);
-	RUN_TEST(tr, testParseInputStopRequestC);
-	RUN_TEST(tr, testParseInputBusRequest);
-	////RUN_TEST(tr, simpleTestFill);
-	RUN_TEST(tr, testLeght);
-	//RUN_TEST(tr, testWrite);
-	//RUN_TEST(tr, simpleTestRead);
-	//RUN_TEST(tr, simpleTestReadC);
-	//RUN_TEST(tr, fullTest);
-	//RUN_TEST(tr, fullTestC);
+	//RUN_TEST(tr, testParseInputStopRequest);
+	//RUN_TEST(tr, testParseInputStopRequestC);
+	//RUN_TEST(tr, testParseInputBusRequest);
+	//////RUN_TEST(tr, simpleTestFill);
+	//RUN_TEST(tr, testLeght);
+	////RUN_TEST(tr, testWrite);
+	////RUN_TEST(tr, simpleTestRead);
+	////RUN_TEST(tr, simpleTestReadC);
+	////RUN_TEST(tr, fullTest);
+	////RUN_TEST(tr, fullTestC);
+
+	RUN_TEST(tr, jastTest);
 }
 
 /*

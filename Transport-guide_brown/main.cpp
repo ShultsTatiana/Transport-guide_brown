@@ -8,11 +8,15 @@ int main() {
     poolOfTEsts();
 
 	auto groundRequest = ReadRequests();
-	Base base(ProcessRequests(groundRequest));
-	const auto requests = ReadRequests();
-	auto answer = base.checkRequests(requests);
+	//Base base(ProcessRequests(groundRequest));
+	//const auto requests = ReadRequests();
+	//auto answer = base.checkRequests(requests);
+	//writingResult(answer);
+	TransportGuide guide;
+	guide.readRequests(groundRequest);
+	auto requests = ReadRequests();
+	auto answer = guide.checkRequests(requests);
 	writingResult(answer);
-    
     
     return 0;
 }
