@@ -13,6 +13,6 @@ int main() {
 	auto requests = ReadRequests();
 	auto answer = guide.checkRequests(requests);
 	writingResult(answer);
-    
+	      
     return 0;
 }

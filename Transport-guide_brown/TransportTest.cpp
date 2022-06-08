@@ -238,6 +238,15 @@ void test4() {
 	ASSERT_EQUAL(out.str(), expected);
 }
 
+void testJSONread() {
+	ifstream input;
+	input.open("input_test1.json");
+
+	auto groundRequest = Json::Load(input);
+	
+	input.close();             // закрываем файл
+}
+
 
 void poolOfTEsts() {
 	TestRunner tr;
@@ -245,6 +254,8 @@ void poolOfTEsts() {
 	RUN_TEST(tr, test2);
 	RUN_TEST(tr, test3);
 	RUN_TEST(tr, test4);
+
+	RUN_TEST(tr, testJSONread);
 }
 
 /*
