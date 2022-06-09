@@ -13,6 +13,8 @@ namespace Json {
 
     Node LoadNode(istream& input);
 
+    //---------------- JSON input -------------------------------------------------------
+
     Node LoadArray(istream& input) {
         vector<Node> result;
 
@@ -54,7 +56,20 @@ namespace Json {
         
         return Node(double(integer.AsInt()) + (fractional.AsInt() / double(counterDecemal)));
     }
-    // добавить bool "is_roundtrip": true
+    
+    Node LoadBool(istream& input) {
+        string line;
+        getline(input, line, 'e');
+
+        input.get(); //get 'e'
+
+        if (line == "tru") {
+            return Node(true);
+        } else { // (line == "fals")
+            return Node(false);
+        }
+        // не очень надежно, но пока так
+    }
 
     Node LoadString(istream& input) {
         string line;
@@ -88,6 +103,9 @@ namespace Json {
             return LoadDict(input);
         } else if (c == '"') {
             return LoadString(input);
+        } else if (c == 't' || c == 'f') {
+            input.putback(c);
+            return LoadBool(input);
         } else {
             input.putback(c);
             return LoadNumber(input);
@@ -98,4 +116,66 @@ namespace Json {
         return Document{LoadNode(input)};
     }
 
+    //---------------- JSON output ------------------------------------------------------
+
+    ostream& UnloadNode(ostream& out, const Node& node, string tab = string(""));
+
+    ostream& UnloadArray(ostream& out, const Node& node, string tab = string("")) {
+        const vector<Node>& array_ = node.AsArray();
+
+        size_t arraySize = array_.size();
+        for (const auto& includeNode : array_) {
+            out << tab;
+            UnloadNode(out, includeNode, tab);
+            out << (--arraySize ? ",\n" : "\n");
+        }
+
+        return out;
+    }
+
+    ostream& UnloadDict(ostream& out, const Node& node, string tab = string("")) {
+        const map<std::string, Node>& dict = node.AsMap();
+
+        size_t dictSize = dict.size();
+        for (const auto& [name, includeNode] : dict) {
+            out << tab << "\"" << name << "\": ";
+            UnloadNode(out, includeNode, tab);
+            out << (--dictSize ? ",\n" : "\n");
+        }
+
+        return out;
+    }
+
+    ostream& UnloadNode(ostream& out, const Node& node, string tab) {
+        size_t index = node.GetVariantIndex();
+
+        if (index == 0) {
+            out << "[\n";
+            UnloadArray(out, node, string(tab + "  "));
+            return out << tab << "]";
+        }
+        else if (index == 1) {
+            out << "{\n";
+            UnloadDict(out, node, string(tab + "  "));
+            return out << tab << "}";
+        }
+        else if (index == 2) {
+            return out << node.AsInt();
+        }
+        else if (index == 3) {
+            return out << node.AsDouble();
+        }
+        else if (index == 4) {
+            return out << node.AsBool();
+        }
+        else {
+            return out << "\"" << node.AsString() << "\"";
+        }
+        // тоже не очень надежная обработка...
+    }
+
+    ostream& UnloadDoc(ostream& out, const Document& doc) {
+        UnloadNode(out, doc.GetRoot());
+        return out;
+    }
 }

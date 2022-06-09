@@ -2,6 +2,8 @@
 
 using namespace std;
 
+// вытащить обработку запросов из iostream и создать возможность читать-писать и из iostream, и из JSON
+
 //++++++++++++  Location part +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //------------- Parsing StopRequest and BusRequest --------------------------------------
 Location Location::FromString(std::string_view& str) {
@@ -102,7 +104,7 @@ RequestHolder ParseRequest(string_view request_str) {
 }
 
 //------------- Parsing all Requests from string (main) ---------------------------------
-vector<RequestHolder> ReadRequests(istream& in_stream) {
+vector<RequestHolder> ReadRequestsFromSstream(istream& in_stream) {
     const size_t request_count = ReadNumberOnLine<size_t>(in_stream);
 
     vector<RequestHolder> requests;

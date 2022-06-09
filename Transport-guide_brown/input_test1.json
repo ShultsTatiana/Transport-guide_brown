@@ -1,14 +1,14 @@
 {
-  "base_requests": [
+  "base_requests":           [
     {
-      "type": "Stop",
-      "road_distances": {
+      "type"      : "Stop",              
+      "road_distances":     {
         "Marushkino": 3900
-      },
-      "longitude": 37.20829,
-      "name": "Tolstopaltsevo",
-      "latitude": 55.611087
-    },
+      }    ,
+         "longitude"   :           37.20829,
+      "name"  :           "Tolstopaltsevo",
+      "latitude"  :     55.611087   
+       }   ,
     {
       "type": "Stop",
       "road_distances": {
@@ -29,7 +29,7 @@
         "Biryulyovo Passazhirskaya",
         "Biryulyovo Zapadnoye"
       ],
-      "is_roundtrip": true
+      "is_roundtrip"           :              true                  
     },
     {
       "type": "Bus",

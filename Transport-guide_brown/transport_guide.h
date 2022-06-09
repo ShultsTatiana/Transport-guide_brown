@@ -119,8 +119,11 @@ static const std::unordered_map<std::string_view, Request::Type> STR_TO_REQUEST_
 //------------- Parsing one Request from string (main) ----------------------------------
 RequestHolder ParseRequest(std::string_view request_str);
 
-//------------- Parsing all Requests from string (main) ---------------------------------
-std::vector<RequestHolder> ReadRequests(std::istream& in_stream = std::cin);
+//------------- Parsing all Requests ----------------------------------------------------
+//from string ---------------------------------------------------------------------------
+std::vector<RequestHolder> ReadRequestsFromSstream(std::istream& in_stream = std::cin);
+//from JSON -----------------------------------------------------------------------------
+
 
 
 //++++++++++++  RequestResult  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

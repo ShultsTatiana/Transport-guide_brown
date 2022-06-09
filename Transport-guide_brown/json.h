@@ -36,6 +36,11 @@ namespace Json {
         const auto& AsString() const {
             return std::get<std::string>(*this);
         }
+
+        const std::size_t GetVariantIndex() const {
+            return this->index();
+        }
+
     };
 
     class Document {
@@ -49,5 +54,7 @@ namespace Json {
     };
 
     Document Load(std::istream& input);
+
+    std::ostream& UnloadDoc(std::ostream& out, const Document& doc);
 
 }

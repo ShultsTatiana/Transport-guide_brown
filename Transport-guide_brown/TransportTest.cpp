@@ -125,10 +125,10 @@ void test1() {
 	};
 	stringstream input;
 	input << inStr;
-	auto groundRequest = ReadRequests(input);
+	auto groundRequest = ReadRequestsFromSstream(input);
 	TransportGuide guide;
 	guide.readRequests(groundRequest);
-	auto requests = ReadRequests(input);
+	auto requests = ReadRequestsFromSstream(input);
 	auto answer = guide.checkRequests(requests);
 	string expected{
 		"Bus 256: 6 stops on route, 5 unique stops, 5950 route length, 1.361239 curvature\n"
@@ -157,10 +157,10 @@ void test2() {
 	};
 	stringstream input;
 	input << inStr;
-	auto groundRequest = ReadRequests(input);
+	auto groundRequest = ReadRequestsFromSstream(input);
 	TransportGuide guide;
 	guide.readRequests(groundRequest);
-	auto requests = ReadRequests(input);
+	auto requests = ReadRequestsFromSstream(input);
 	auto answer = guide.checkRequests(requests);
 	string expected{
 		"Bus 256: 3 stops on route, 2 unique stops, 200000 route length, 1.763716 curvature\n"
@@ -187,10 +187,10 @@ void test3() {
 	};
 	stringstream input;
 	input << inStr;
-	auto groundRequest = ReadRequests(input);
+	auto groundRequest = ReadRequestsFromSstream(input);
 	TransportGuide guide;
 	guide.readRequests(groundRequest);
-	auto requests = ReadRequests(input);
+	auto requests = ReadRequestsFromSstream(input);
 	auto answer = guide.checkRequests(requests);
 	string expected{
 		"Bus 256: 3 stops on route, 2 unique stops, 400000 route length, 3.527431 curvature\n"
@@ -220,10 +220,10 @@ void test4() {
 	};
 	stringstream input;
 	input << inStr;
-	auto groundRequest = ReadRequests(input);
+	auto groundRequest = ReadRequestsFromSstream(input);
 	TransportGuide guide;
 	guide.readRequests(groundRequest);
-	auto requests = ReadRequests(input);
+	auto requests = ReadRequestsFromSstream(input);
 	auto answer = guide.checkRequests(requests);
 	string expected{
 		"Bus 256: 3 stops on route, 2 unique stops, 400000 route length, 3.527431 curvature\n"
@@ -239,12 +239,32 @@ void test4() {
 }
 
 void testJSONread() {
-	ifstream input;
-	input.open("input_test1.json");
+	{
+		ifstream input;
+		input.open("input_test1.json");
 
-	auto groundRequest = Json::Load(input);
-	
-	input.close();             // закрываем файл
+		auto groundRequest = Json::Load(input);
+
+		ofstream out;
+		out.open("input_out_test1.json");
+		UnloadDoc(out, groundRequest);
+
+		input.close();             // закрываем файл
+		out.close();             // закрываем файл
+	}
+	{
+		ifstream input;
+		input.open("out_test1.json");
+
+		auto groundRequest = Json::Load(input);
+
+		ofstream out;
+		out.open("out_out_test1.json");
+		UnloadDoc(out, groundRequest);
+
+		input.close();             // закрываем файл
+		out.close();             // закрываем файл
+	}
 }
 
 
