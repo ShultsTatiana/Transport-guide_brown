@@ -31,7 +31,7 @@ namespace Stream {
 
     struct Bus {
         std::string name;
-        std::optional<char> routType_;
+        std::optional<bool> is_roundtrip;
         std::vector<std::string> vectorRoute;
 
         static Bus FromString(std::string_view& str);

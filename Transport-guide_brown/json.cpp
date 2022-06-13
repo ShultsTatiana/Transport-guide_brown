@@ -61,12 +61,15 @@ namespace Json {
         string line;
         getline(input, line, 'e');
 
-        input.get(); //get 'e'
+        //input.get(); //get 'e'
+
+        //char c;
+        //input >> c;
 
         if (line == "tru") {
-            return Node(true);
+            return Node(bool(true));
         } else { // (line == "fals")
-            return Node(false);
+            return Node(bool(false));
         }
         // не очень надежно, но пока так
     }
@@ -175,6 +178,7 @@ namespace Json {
     }
 
     ostream& UnloadDoc(ostream& out, const Document& doc) {
+        //out.precision(6);
         UnloadNode(out, doc.GetRoot());
         return out;
     }

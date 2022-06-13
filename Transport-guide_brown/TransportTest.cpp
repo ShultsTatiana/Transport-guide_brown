@@ -37,7 +37,7 @@ namespace Stream{
 		return(
 			lhs.name == rhs.name &&
 			lhs.vectorRoute == rhs.vectorRoute &&
-			lhs.routType_ == rhs.routType_
+			lhs.is_roundtrip == rhs.is_roundtrip
 			);
 	}
 
@@ -58,7 +58,8 @@ namespace Stream{
 		out << lhs.bus->name << ": ";
 		if (!lhs.bus->vectorRoute.empty()) {
 			for (size_t i(0); i < lhs.bus->vectorRoute.size() - 1; ++i) {
-				out << lhs.bus->vectorRoute[i] << " " << lhs.bus->routType_.value() << " ";
+				out << lhs.bus->vectorRoute[i] << " " 
+					<< (lhs.bus->is_roundtrip.value() ? '<' : '-') << " ";
 			}
 			out << lhs.bus->vectorRoute.back();
 		}
@@ -97,7 +98,8 @@ ostream& operator<<(ostream& out, const Stream::Bus& lhs) {
 	out << lhs.name << ": ";
 	if (!lhs.vectorRoute.empty()) {
 		for (size_t i(0); i < lhs.vectorRoute.size() - 1; ++i) {
-			out << lhs.vectorRoute << " " << lhs.routType_.value() << " ";
+			out << lhs.vectorRoute << " " 
+				<< (lhs.is_roundtrip.value() ? '<' : '-') << " ";
 		}
 		out << lhs.vectorRoute.back();
 	}
@@ -273,7 +275,7 @@ namespace Json {
 			out.close();             // закрываем файл
 		}
 	}
-	/*
+	
 	void test1(){
 
 		ifstream input;
@@ -284,9 +286,17 @@ namespace Json {
 		TransportGuide guide;
 		guide.readRequests(groundRequest);
 
-		auto answer = guide.checkRequests(requests);
+		auto answer = guide.checkRequests(groundRequest);
+
+		ofstream out;
+		out.open("out_from_test1.json");
+
+		UnloadDoc(out, answer);
+
+		input.close();             // закрываем файл
+		out.close();             // закрываем файл
 	}
-	*/
+	
 }
 
 void poolOfTEsts() {
@@ -297,6 +307,7 @@ void poolOfTEsts() {
 	RUN_TEST(tr, Stream::test4);
 	/**/
 	RUN_TEST(tr, Json::testJSONread);
+	RUN_TEST(tr, Json::test1);
 }
 
 /*

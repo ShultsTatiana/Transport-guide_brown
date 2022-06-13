@@ -46,7 +46,7 @@ class TransportGuide {
         StopOnRout() : distanceTo(N_REQUESTS, -1) {
         }
         // Set Stop methods
-        void setLocation(Location& location_);
+        void setLocation(Location location_);
         void addDistanceToNextStop(hashStop stopTo, int distanse);
         void addBus(std::string_view busName);
 
@@ -81,7 +81,7 @@ class TransportGuide {
         void updateCurvature();
     public:
         // Update Type, Rout and distance on route
-        void        setType(char chType);
+        void        setType(bool is_roundtrip);
         hashStop    addStopOnRoute(hashStop stop);
         void        updateDistances(int length, double directLength);
 
@@ -112,14 +112,17 @@ class TransportGuide {
     // заполняем маршруты после остановок
     void addRoute(Stream::Bus& busFromRequest);
     //from JSON -------------------------------------------------------------------------
-
+    void addStop(const Json::Node& stopFromRequest);
+    // заполняем маршруты после остановок
+    void addRoute(const Json::Node& busFromRequest);
 
     // Get result
     //from Stream -----------------------------------------------------------------------
     Stream::BusResult getBusResultStream(std::string busName) const;
     Stream::StopResult getStopResultStream(std::string stopName) const;
     //from JSON -------------------------------------------------------------------------
-    //auto getStopResult(std::string stopName) const;
+    Json::Node getBusResult(std::string stopName, Json::Node id) const;
+    Json::Node getStopResult(std::string stopName, Json::Node id) const;
 
 public:
     TransportGuide() {
@@ -131,14 +134,15 @@ public:
     //from Stream -----------------------------------------------------------------------
     void readRequests(std::vector<Stream::RequestHolder>& requests);
     //from JSON -------------------------------------------------------------------------
-    
+    void readRequests(Json::Document& document);
+
     // Process get info from base (Chek)
     //from Stream -----------------------------------------------------------------------
     std::vector<std::unique_ptr<Stream::RequestResult>> checkRequests(
         std::vector<Stream::RequestHolder>& requests
     ) const;
     //from JSON -------------------------------------------------------------------------
-
+    Json::Document checkRequests(Json::Document& document) const;
 };
 
 //------------- Parsing all Requests ----------------------------------------------------

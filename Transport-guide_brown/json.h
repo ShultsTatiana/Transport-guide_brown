@@ -5,6 +5,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <iomanip>
 
 namespace Json {
 

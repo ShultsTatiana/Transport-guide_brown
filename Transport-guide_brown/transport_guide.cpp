@@ -4,7 +4,7 @@ using namespace std;
 
 //------------- TransportGuide::StopOnRout part -----------------------------------------
 // Set Stop methods (public)
-void TransportGuide::StopOnRout::setLocation(Location& location_) {
+void TransportGuide::StopOnRout::setLocation(Location location_) {
     location.latitude = location_.latitude;
     location.longitude = location_.longitude;
 }
@@ -49,13 +49,14 @@ void TransportGuide::Route::updateCurvature() {
 }
 
 // Update Type, Rout and distance on route (public)
-void TransportGuide::Route::setType(char chType) {
-    if (chType == '-') {
+void TransportGuide::Route::setType(bool is_roundtrip) {
+    if (is_roundtrip) {
+        type = Type::CIRCULAR;
+    } 
+    else {
         type = Type::DIRECT;
     }
-    else if (chType == '>') {
-        type = Type::CIRCULAR;
-    }
+    
 }
 TransportGuide::hashStop TransportGuide::Route::addStopOnRoute(hashStop stop) {
     route.push_back(stop);
@@ -73,7 +74,7 @@ int TransportGuide::Route::getStopOnRouteCount() const {
     if (type == Type::DIRECT) {
         return int(route.size() * 2 - 1);
     }
-    else if (type == Type::CIRCULAR) {
+    else {//if (type == Type::CIRCULAR) {
         return int(route.size());
     }
 }
@@ -141,8 +142,8 @@ void TransportGuide::updateDistanceRoute(hashStop from, hashStop to, hashBus bus
 }
 
 //++++++++++++++++++++++ Parsing request part +++++++++++++++++++++++++++++++++++++++++++
-//from Stream ---------------------------------------------------------------------------
 // Process Updating base from read request
+//from Stream ---------------------------------------------------------------------------
 void TransportGuide::addStop(Stream::Stop& stopFromRequest) {
     hashStop stopFrom = addNewStop(move(stopFromRequest.name));
     stops[stopFrom].setLocation(*(stopFromRequest.location));
@@ -155,7 +156,7 @@ void TransportGuide::addStop(Stream::Stop& stopFromRequest) {
 // заполняем маршруты после остановок
 void TransportGuide::addRoute(Stream::Bus& busFromRequest) {
     auto busIt = addNewBus(move(busFromRequest.name));
-    buses[busIt->second].setType(*(busFromRequest.routType_));
+    buses[busIt->second].setType(*(busFromRequest.is_roundtrip));
 
     for (size_t i(0); i < busFromRequest.vectorRoute.size(); ++i) {
         hashStop stopIndex = addNewStop(move(busFromRequest.vectorRoute[i]));
@@ -168,6 +169,43 @@ void TransportGuide::addRoute(Stream::Bus& busFromRequest) {
     }
 }
 //from JSON -----------------------------------------------------------------------------
+void TransportGuide::addStop(const Json::Node& stopFromRequest) {
+    using namespace Json;
+
+    const map<string, Node>& request = stopFromRequest.AsMap();
+
+    hashStop stopFrom = addNewStop(request.at("name").AsString());
+    stops[stopFrom].setLocation( 
+        Location(
+            request.at("latitude").AsDouble(),
+            request.at("longitude").AsDouble()
+        )
+    );
+
+    for (auto [stopToName, distance] : request.at("road_distances").AsMap()) {
+        hashStop stopTo = addNewStop(stopToName);
+        addDistance(stopFrom, stopTo, distance.AsInt());
+    }
+}
+void TransportGuide::addRoute(const Json::Node& busFromRequest) {
+    using namespace Json;
+
+    const map<string, Node>& request = busFromRequest.AsMap();
+
+    auto busIt = addNewBus(request.at("name").AsString());
+    buses[busIt->second].setType(request.at("is_roundtrip").AsBool());
+
+    const vector<Node>& stopsOnRoute = request.at("stops").AsArray();
+    for (size_t i(0); i < stopsOnRoute.size(); ++i) {
+        hashStop stopIndex = addNewStop(stopsOnRoute[i].AsString());
+
+        stops[stopIndex].addBus(busIt->first);
+
+        hashStop stopBefore = buses[busIt->second].addStopOnRoute(stopIndex);
+
+        updateDistanceRoute(stopBefore, stopIndex, busIt->second);
+    }
+}
 
 // Get result Get request
 //from Stream ---------------------------------------------------------------------------
@@ -191,8 +229,8 @@ Stream::BusResult TransportGuide::getBusResultStream(string busName) const {
 Stream::StopResult TransportGuide::getStopResultStream(string stopName) const {
     if (auto it = hashStops.find(stopName); it != hashStops.end()) {
         const StopOnRout& stop = stops[it->second];
-        std::string result;
-        for (std::string_view bus : stop.getBuses()) {
+        string result;
+        for (string_view bus : stop.getBuses()) {
             result += ' ';
             result += bus;
         }
@@ -203,7 +241,45 @@ Stream::StopResult TransportGuide::getStopResultStream(string stopName) const {
     }
 }
 //from JSON -----------------------------------------------------------------------------
+Json::Node TransportGuide::getBusResult(string name, Json::Node id) const {
+    using namespace Json;
 
+    map<string, Node> result;
+    result.emplace("request_id", move(id) );
+
+    if (auto it = hashBuses.find(name); it != hashBuses.end()) {
+        const Route& route = buses[it->second];
+        result.emplace("stop_count", Node(route.getStopOnRouteCount()));
+        result.emplace("unique_stop_count", Node(route.getUniqStopOnRouteCount()));
+        result.emplace("route_length", Node(route.getLength()));
+        result.emplace("curvature", Node(route.getCurvature()));
+    }
+    else {
+        result.emplace("error_message", Node("not found"));
+    }
+
+    return Node(move(result));
+}
+Json::Node TransportGuide::getStopResult(string name, Json::Node id) const {
+    using namespace Json;
+
+    map<string, Node> result;
+    result.emplace("request_id", move(id));
+
+    if (auto it = hashStops.find(name); it != hashStops.end()) {
+        const StopOnRout& stop = stops[it->second];
+        vector<Node> busesResult;
+        for (string_view bus : stop.getBuses()) {
+            busesResult.push_back(Node(string(bus)));
+        }
+        result.emplace("buses", Node(busesResult));
+    }
+    else {
+        result.emplace("error_message", Node("not found"));
+    }
+
+    return Node(move(result));
+}
 
 // public part
 // Process Updating base from request
@@ -222,7 +298,25 @@ void TransportGuide::readRequests(vector<Stream::RequestHolder>& requests) {
     }
 }
 //from JSON -----------------------------------------------------------------------------
+void TransportGuide::readRequests(Json::Document& document) {
+    using namespace Json;
+    //может потребоваться обработка исключений
+    const vector<Node>& requests = 
+        document.GetRoot().AsMap().at("base_requests").AsArray();
 
+    for (const Node& request : requests) {
+        const string& requestType = request.AsMap().at("type").AsString();
+        if (requestType == "Stop") {
+            addStop(request);
+        }
+    }
+    for (const Node& request : requests) {
+        const string& requestType = request.AsMap().at("type").AsString();
+        if (requestType == "Bus") {
+            addRoute(request);
+        }
+    }
+}
 
 // Process get info from base (Chek)
 //from Stream ---------------------------------------------------------------------------
@@ -246,7 +340,32 @@ vector<unique_ptr<Stream::RequestResult>> TransportGuide::checkRequests(
     return result;
 }
 //from JSON -----------------------------------------------------------------------------
+Json::Document TransportGuide::checkRequests(Json::Document& document) const {
+    using namespace Json;
 
+    const vector<Node>& requestsVector =
+        document.GetRoot().AsMap().at("stat_requests").AsArray();
+
+    vector<Node> results;
+    results.reserve(requestsVector.size());
+    
+    for (const auto& requestMap : requestsVector) {
+        const auto& request = requestMap.AsMap();
+        
+        const string& type = request.at("type").AsString();
+        string name = request.at("name").AsString();
+        Node id = request.at("id");
+
+        if (type == "Bus") {
+            results.push_back(getBusResult(move(name), move(id)));
+        }
+        else {
+            results.push_back(getStopResult(move(name), move(id)));
+        }
+    }
+
+    return Document{ Node{move(results)} };
+}
 
 namespace Stream {
     //------------- Parsing all Requests ----------------------------------------------------

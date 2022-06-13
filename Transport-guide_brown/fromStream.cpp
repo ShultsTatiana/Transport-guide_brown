@@ -23,16 +23,16 @@ namespace Stream {
         string name(ReadToken(str, ": "));
         if (!str.empty()) {
             std::string_view delimiter(" > ");
-            char ch('>');
+            bool is_roundtrip(true);
             if (str.find(delimiter) == str.npos) {
                 delimiter = " - ";
-                ch = '-';
+                is_roundtrip = false;
             }
             std::vector<std::string> routes;
             while (!str.empty()) {
                 routes.push_back(std::string(ReadToken(str, delimiter)));
             }
-            return Bus{ move(name), ch, move(routes) };
+            return Bus{ move(name), is_roundtrip, move(routes) };
         }
         else {
             return Bus{ move(name) };
