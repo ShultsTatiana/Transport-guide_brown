@@ -1,15 +1,16 @@
 #pragma once
 
-#include <utility>
 #include <string_view>
-#include <optional>
-#include <string>
 #include <iostream>
 #include <sstream>
+#include <utility>
+#include <optional>
 #include <exception>
+#include <system_error>
+#include <string>
 
 //++++++++++++  Help part +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//------------- Parsing string by parts -------------------------------------------------
+    //------------- Parsing string by parts -------------------------------------------------
 std::pair<std::string_view, std::optional<std::string_view>> SplitTwoStrict(
     std::string_view s,
     std::string_view delimiter = " ");
@@ -40,6 +41,3 @@ void ValidateBounds(Number number_to_check, Number min_value, Number max_value) 
         throw std::out_of_range(error.str());
     }
 }
-
-
-

@@ -19,9 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="json.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="helper.cpp" />
+    <ClCompile Include="json.cpp" />
+    <ClCompile Include="location.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="fromStream.cpp" />
     <ClCompile Include="TransportTest.cpp" />
     <ClCompile Include="transport_guide.cpp" />
   </ItemGroup>
@@ -31,6 +33,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helper.h" />
+    <ClInclude Include="location.h" />
+    <ClInclude Include="fromStream.h" />
     <ClInclude Include="json.h" />
     <ClInclude Include="profile.h" />
     <ClInclude Include="test_runner.h" />

@@ -27,6 +27,12 @@
     <ClCompile Include="json.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="fromStream.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="location.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
     <ClCompile Include="helper.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
@@ -51,8 +57,14 @@
     <ClInclude Include="json.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="fromStream.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="location.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
     <ClInclude Include="helper.h">
-      <Filter>Исходные файлы</Filter>
+      <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
