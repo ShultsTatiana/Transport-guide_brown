@@ -42,6 +42,12 @@ namespace Json {
             return this->index();
         }
 
+        double returnDouble() const;
+
+        bool checkIndex(std::size_t index) const {
+            return GetVariantIndex() == index;
+        }
+
     };
 
     class Document {

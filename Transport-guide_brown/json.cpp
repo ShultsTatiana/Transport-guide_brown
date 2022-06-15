@@ -13,6 +13,20 @@ namespace Json {
 
     Node LoadNode(istream& input);
 
+    double Node::returnDouble() const {
+        auto index = GetVariantIndex();
+
+        if (index == 2) {
+            return AsInt();
+        }
+        else if (index == 3) {
+            return AsDouble();
+        }
+        else {
+            //throw std::out_of_range(string("Bad index in returnDouble"));
+        }
+    }
+
     //---------------- JSON input -------------------------------------------------------
 
     Node LoadArray(istream& input) {
@@ -31,30 +45,30 @@ namespace Json {
     Node LoadInt(istream& input) {
         int result = 0;
 
-        while (isdigit(input.peek())) {
-            result *= 10;
-            result += input.get() - '0';
-        }
+        input >> result;
 
         return Node(result);
     }
 
     Node LoadNumber(istream& input) {
-        auto integer(LoadInt(input));
+        int negative = 1;
+        if (input.peek() == '-') {  // число целое
+            negative = -1;
+        }
+
+        Node integer(LoadInt(input));
 
         if (input.peek() != '.') {  // число целое
             return Node(integer);
         }
 
-        input.get();
-        auto fractional(LoadInt(input));
-
-        int counterDecemal = 1;
-        for (int i(fractional.AsInt()); i != 0; i /= 10) { 
-            counterDecemal *= 10;
-        }
+        input.putback('0');
+        double fractional;
+        input >> fractional;
         
-        return Node(double(integer.AsInt()) + (fractional.AsInt() / double(counterDecemal)));
+        fractional = integer.AsInt() + 
+            ( integer.AsInt() <= 0 ? fractional * negative : fractional );
+        return Node(fractional);
     }
     
     Node LoadBool(istream& input) {
@@ -62,9 +76,6 @@ namespace Json {
         getline(input, line, 'e');
 
         //input.get(); //get 'e'
-
-        //char c;
-        //input >> c;
 
         if (line == "tru") {
             return Node(bool(true));

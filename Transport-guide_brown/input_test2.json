@@ -1,0 +1,155 @@
+{
+	"base_requests": [
+		{
+			"latitude": 0.0000000000000000001,
+			"longitude": 0.0000000000000000001,
+			"name": "A",
+			"road_distances": {			
+				"B": 20,
+				"C": 30,
+				"D": 40
+			},
+			"type": "Stop"
+		},
+		{
+			"name": "B",
+			"road_distances": {			
+				"A": 50,
+				"C": 60,
+				"D": 70
+			},
+			"type": "Stop",
+			"latitude": 0.0001,
+			"longitude": 0		
+		},
+		{
+			"latitude": -0.0001,
+			"longitude": 0,
+			"road_distances": {			
+				"A": 80,
+				"B": 90,
+				"D": 100
+			},
+			"type": "Stop",
+			"name": "C"		
+		},
+		{
+			"latitude": 0.0002,
+			"longitude": 0.0002,
+			"name": "D",
+			"type": "Stop",	
+			"road_distances": { }
+		},
+		{
+			"latitude": 1.0002,
+			"longitude": 1.0002,
+			"name": "E",
+			"type": "Stop",	
+			"road_distances": {
+				"F": 320000
+			}
+		},
+		{
+			"latitude": -1.0002,
+			"longitude": -1.0002,
+			"name": "F",
+			"type": "Stop",	
+			"road_distances": { 
+				"E": 340000     
+			}
+		},
+		{
+		  "is_roundtrip": false,
+		  "name": "1",
+		  "stops": [
+			"A",
+			"B",
+			"C"
+		  ],
+		  "type": "Bus"
+		},
+		{
+		  "name": "2",
+		  "stops": [
+			"A",
+			"B",
+			"C",
+			"A"
+		  ],
+		  "type": "Bus",
+		  "is_roundtrip": true
+		},
+		{
+		  "is_roundtrip": false,
+		  "name": "3",
+		  "stops": [
+			"E",
+			"F"
+		  ],
+		  "type": "Bus"
+		}
+	]
+	"stat_requests": [
+		{
+			"id": 2147483647,
+			"name": "1",
+			"type": "Bus"
+		},
+		{
+			"id": 4567,
+			"name": "3",
+			"type": "Bus"
+		},
+		{
+			"id": 0,
+			"name": "0",
+			"type": "Bus"
+		},
+		{
+			"type": "Bus",
+			"name": "1",
+			"id": 1
+		},
+		{
+			"type": "Bus",
+			"id": 2,
+			"name": "2"			
+		},
+		{
+			"type": "Stop",
+			"id": 3,
+			"name": "A"			
+		},
+		{
+			"type": "Stop",
+			"id": 4,
+			"name": "B"			
+		},
+		{
+			"type": "Stop",
+			"id": 5,
+			"name": "C"			
+		},
+		{
+			"type": "Stop",
+			"id": 6,
+			"name": "D"			
+		},
+		{
+			"type": "Stop",
+			"id": 7,
+			"name": "E"			
+		},	
+		{
+			"type": "Stop",
+			"id": 8,
+			"name": "F"			
+		},	
+		{
+			"type": "Stop",
+			"id": 9,
+			"name": "G"			
+		}	
+		
+	]
+}

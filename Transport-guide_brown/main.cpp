@@ -19,7 +19,7 @@ int main() {
 
 		Stream::writingResult(guide.checkRequests(requests));
 	}
-	*/
+	
 
 	{
 		using namespace Json;
@@ -32,7 +32,7 @@ int main() {
 		auto answer = guide.checkRequests(groundRequest);
 
 		UnloadDoc(cout, answer);
-	}
+	}*/
 
     return 0;
 }

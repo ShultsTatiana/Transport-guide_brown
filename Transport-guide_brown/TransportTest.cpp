@@ -276,8 +276,8 @@ namespace Json {
 		}
 	}
 	
-	void test1(){
-
+	void test1() {
+		{
 		ifstream input;
 		input.open("input_test1.json");
 
@@ -295,6 +295,59 @@ namespace Json {
 
 		input.close();             // закрываем файл
 		out.close();             // закрываем файл
+		}
+		{
+			ifstream expect;
+			expect.open("expect_out_test1.json");
+			ifstream out;
+			out.open("out_from_test1.json");
+
+			string lineExpect;
+			string lineAnswer;
+			while (getline(expect, lineExpect) && getline(out, lineAnswer)) {
+				ASSERT_EQUAL(lineExpect, lineAnswer);
+			}
+			expect.close();
+		}
+
+		
+	}
+
+	void test2() {
+		{
+			ifstream input;
+			input.open("input_test2.json");
+
+			auto groundRequest = Load(input);
+
+			TransportGuide guide;
+			guide.readRequests(groundRequest);
+
+			auto answer = guide.checkRequests(groundRequest);
+
+			ofstream out;
+			out.open("out_from_test2.json");
+
+			UnloadDoc(out, answer);
+
+			input.close();             // закрываем файл
+			out.close();             // закрываем файл
+		}
+		{
+			ifstream expect;
+			expect.open("expect_out_test2.json");
+			ifstream out;
+			out.open("out_from_test2.json");
+
+			string lineExpect;
+			string lineAnswer;
+			while (getline(expect, lineExpect) && getline(out, lineAnswer)) {
+				ASSERT_EQUAL(lineExpect, lineAnswer);
+			}
+			expect.close();
+		}
+
+
 	}
 	
 }
@@ -308,6 +361,7 @@ void poolOfTEsts() {
 	/**/
 	RUN_TEST(tr, Json::testJSONread);
 	RUN_TEST(tr, Json::test1);
+	RUN_TEST(tr, Json::test2);
 }
 
 /*

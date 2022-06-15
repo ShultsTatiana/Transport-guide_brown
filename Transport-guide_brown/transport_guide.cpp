@@ -168,42 +168,79 @@ void TransportGuide::addRoute(Stream::Bus& busFromRequest) {
         updateDistanceRoute(stopBefore, stopIndex, busIt->second);
     }
 }
+
 //from JSON -----------------------------------------------------------------------------
 void TransportGuide::addStop(const Json::Node& stopFromRequest) {
     using namespace Json;
+    
+    //проверяем соответствует ли запрос ожидаемому формату Map
+    if (stopFromRequest.checkIndex(1)) {
+        const map<string, Node>& request = stopFromRequest.AsMap();
 
-    const map<string, Node>& request = stopFromRequest.AsMap();
+        //если у остановки указаны имя и координаты - ее можно добавлять в базу
+        //тк имя и координаты обязательно должны быть
+        if (auto itName = request.find("name"), 
+            itLat = request.find("latitude"), itLong = request.find("longitude");
+            itName != request.end() &&
+            itLat != request.end() && itLong != request.end()) {
+                        
+            hashStop stopFrom = addNewStop(itName->second.AsString());
+            stops[stopFrom].setLocation(
+                Location( itLat->second.returnDouble(), itLong->second.returnDouble() )
+            );
+            
+            //проверяем наличие у остановки списка расстояний
+            if (auto itDistances = request.find("road_distances");
+                itDistances != request.end()) {
 
-    hashStop stopFrom = addNewStop(request.at("name").AsString());
-    stops[stopFrom].setLocation( 
-        Location(
-            request.at("latitude").AsDouble(),
-            request.at("longitude").AsDouble()
-        )
-    );
+                //проверяем соответствует ли road_distances ожидаемому формату Map
+                if (itDistances->second.checkIndex(1)) {
 
-    for (auto [stopToName, distance] : request.at("road_distances").AsMap()) {
-        hashStop stopTo = addNewStop(stopToName);
-        addDistance(stopFrom, stopTo, distance.AsInt());
+                    for (auto [stopToName, distance] : itDistances->second.AsMap()) {
+
+                        //проверяем соответствует ли distance ожидаемому Int
+                        if (distance.checkIndex(2)) {
+                            hashStop stopTo = addNewStop(stopToName);
+                            addDistance(stopFrom, stopTo, distance.AsInt());
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 void TransportGuide::addRoute(const Json::Node& busFromRequest) {
     using namespace Json;
 
-    const map<string, Node>& request = busFromRequest.AsMap();
+    //проверяем соответствует ли запрос ожидаемому формату Map
+    if (busFromRequest.checkIndex(1)) {
 
-    auto busIt = addNewBus(request.at("name").AsString());
-    buses[busIt->second].setType(request.at("is_roundtrip").AsBool());
+        const map<string, Node>& request = busFromRequest.AsMap();
 
-    const vector<Node>& stopsOnRoute = request.at("stops").AsArray();
-    for (size_t i(0); i < stopsOnRoute.size(); ++i) {
-        hashStop stopIndex = addNewStop(stopsOnRoute[i].AsString());
+        //если у автобуса указаны имя, маршрут и тип - его можно добавлять в базу
+        //тк имя, маршрут и тип обязательно должны быть
+        if (auto itName = request.find("name"), 
+            itStops = request.find("stops"),
+            itType = request.find("is_roundtrip");
+            itName != request.end() &&
+            itStops != request.end() && itType != request.end()) {
+            
+            //пока оставим без проверки формат имени, маршрута и типа
+            auto busIt = addNewBus(itName->second.AsString());
+            buses[busIt->second].setType(itType->second.AsBool());
 
-        stops[stopIndex].addBus(busIt->first);
+            const vector<Node>& stopsOnRoute = itStops->second.AsArray();
 
-        hashStop stopBefore = buses[busIt->second].addStopOnRoute(stopIndex);
+            for (size_t i(0); i < stopsOnRoute.size(); ++i) {
+                hashStop stopIndex = addNewStop(stopsOnRoute[i].AsString());
 
-        updateDistanceRoute(stopBefore, stopIndex, busIt->second);
+                stops[stopIndex].addBus(busIt->first);
+
+                hashStop stopBefore = buses[busIt->second].addStopOnRoute(stopIndex);
+
+                updateDistanceRoute(stopBefore, stopIndex, busIt->second);
+            }
+        }
     }
 }
 
@@ -249,10 +286,11 @@ Json::Node TransportGuide::getBusResult(string name, Json::Node id) const {
 
     if (auto it = hashBuses.find(name); it != hashBuses.end()) {
         const Route& route = buses[it->second];
-        result.emplace("stop_count", Node(route.getStopOnRouteCount()));
-        result.emplace("unique_stop_count", Node(route.getUniqStopOnRouteCount()));
-        result.emplace("route_length", Node(route.getLength()));
-        result.emplace("curvature", Node(route.getCurvature()));
+        //может потребоваться string("") для ключа
+        result.emplace("stop_count", Node(int(route.getStopOnRouteCount())));
+        result.emplace("unique_stop_count", Node(int(route.getUniqStopOnRouteCount())));
+        result.emplace("route_length", Node(int(route.getLength())));
+        result.emplace("curvature", Node(double(route.getCurvature())));
     }
     else {
         result.emplace("error_message", Node("not found"));
@@ -275,7 +313,7 @@ Json::Node TransportGuide::getStopResult(string name, Json::Node id) const {
         result.emplace("buses", Node(busesResult));
     }
     else {
-        result.emplace("error_message", Node("not found"));
+        result.emplace("error_message", Node(string("not found")));
     }
 
     return Node(move(result));
@@ -300,20 +338,42 @@ void TransportGuide::readRequests(vector<Stream::RequestHolder>& requests) {
 //from JSON -----------------------------------------------------------------------------
 void TransportGuide::readRequests(Json::Document& document) {
     using namespace Json;
-    //может потребоваться обработка исключений
-    const vector<Node>& requests = 
-        document.GetRoot().AsMap().at("base_requests").AsArray();
+    // если среди запросов небыло запросов на заполнение базы или 
+    auto root = document.GetRoot();
+    if (root.checkIndex(1)) {
+        auto requestsMap = root.AsMap();
+        
+        if (auto itRequests = requestsMap.find("base_requests");
+            itRequests != requestsMap.end() && itRequests->second.checkIndex(0)) {
 
-    for (const Node& request : requests) {
-        const string& requestType = request.AsMap().at("type").AsString();
-        if (requestType == "Stop") {
-            addStop(request);
-        }
-    }
-    for (const Node& request : requests) {
-        const string& requestType = request.AsMap().at("type").AsString();
-        if (requestType == "Bus") {
-            addRoute(request);
+            const vector<Node>& requests = itRequests->second.AsArray();
+
+            for (const Node& request : requests) {
+                if (request.checkIndex(1)) {
+
+                    if (auto itRequest = request.AsMap().find("type");
+                        itRequest != request.AsMap().end() &&
+                        itRequest->second.checkIndex(5)) {
+
+                        if (itRequest->second.AsString() == "Stop") {
+                            addStop(request);
+                        }
+                    }
+                }
+            }
+            for (const Node& request : requests) {
+                if (request.checkIndex(1)) {
+
+                    if (auto itRequest = request.AsMap().find("type");
+                        itRequest != request.AsMap().end() &&
+                        itRequest->second.checkIndex(5)) {
+
+                        if (itRequest->second.AsString() == "Bus") {
+                            addRoute(request);
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -343,28 +403,53 @@ vector<unique_ptr<Stream::RequestResult>> TransportGuide::checkRequests(
 Json::Document TransportGuide::checkRequests(Json::Document& document) const {
     using namespace Json;
 
-    const vector<Node>& requestsVector =
-        document.GetRoot().AsMap().at("stat_requests").AsArray();
-
     vector<Node> results;
-    results.reserve(requestsVector.size());
-    
-    for (const auto& requestMap : requestsVector) {
-        const auto& request = requestMap.AsMap();
-        
-        const string& type = request.at("type").AsString();
-        string name = request.at("name").AsString();
-        Node id = request.at("id");
+    auto root = document.GetRoot();
 
-        if (type == "Bus") {
-            results.push_back(getBusResult(move(name), move(id)));
-        }
-        else {
-            results.push_back(getStopResult(move(name), move(id)));
+    //проверяем соответствует ли документ ожидаемому формату Map
+    if (root.checkIndex(1)) {
+        auto requestsMap = root.AsMap();
+
+        //проверяем наличие в документе запросов типа stat_requests
+        //проверяем соответствует ли запрос ожидаемому формату vector<Node>
+        if (auto itRequests = requestsMap.find("stat_requests");
+            itRequests != requestsMap.end() && itRequests->second.checkIndex(0)) {
+
+            const vector<Node>& requests = itRequests->second.AsArray();
+            //резервируем results (защита от релокации)
+            results.reserve(requests.size());
+
+            for (const Node& requestMap : requests) {
+                //проверяем соответствует ли запрос ожидаемому формату Map
+                if (requestMap.checkIndex(1)) {
+
+                    const auto& request = requestMap.AsMap();
+
+                    //проверяем наличие в запросе обязательных полей
+                    if (
+                        auto itType = request.find("type"),
+                        itName = request.find("name"), 
+                        itId = request.find("id");
+                        itType != request.end() &&
+                        itName != request.end() && 
+                        itId != request.end()) 
+                    {
+
+                        const string& type = itType->second.AsString();
+                        string name = itName->second.AsString();
+
+                        if (type == "Bus") {
+                            results.push_back(getBusResult(move(name), itId->second));
+                        }
+                        else {
+                            results.push_back(getStopResult(move(name), itId->second));
+                        }
+                    }
+                }
+            }
         }
     }
-
-    return Document{ Node{move(results)} };
+    return Document{ Node{results} };
 }
 
 namespace Stream {
